@@ -21,14 +21,27 @@ func get(folder: Folder, json:Data) throws {
 	func t(_ list: String...) -> String { list.joined(separator: "\t") + "\n" }
 	func h(_ list: [String]) -> String { list.joined(separator: "\t") + "\n" }
 	let map = try JSONDecoder().decode([String:[String:String]].self, from: json)
-	for (lan, table) in map {
-		var context = t("key","value")
+	let lans = map.keys.sorted()
+	var context = h(["key"]+lans)
+	var rowCollection:[String: [String]] = [:]
+	for lan in lans {
+		let table = map[lan]!
 		for (k, v) in table {
-			context += t(k,v)
+			switch rowCollection[k] != nil {
+			case true : rowCollection[k]! += [v]
+			case false: rowCollection[k] = [v]
+			}
+//			context += t(k,v)
 		}
-		let file = try folder.createFileIfNeeded(withName: "\(lan).tsv")
-		try file.write(context)
 	}
+	let sortedResult = rowCollection.sorted { (p1, p2) -> Bool in
+		p1.key < p2.key
+	}
+	for (k, array) in sortedResult {
+		context += h([k] + array)
+	}
+	let file = try folder.createFileIfNeeded(withName: "result.tsv")
+	try file.write(context)
 }
 try! get(folder: folder, json: json)
 
